@@ -1,0 +1,262 @@
+class file:
+    def __init__(self, name):
+        self.name = name
+        self.content = []
+
+    def write(self, lines):
+        self.content = list(lines)
+
+    def append(self, line):
+        self.content.append(line)
+
+    def read(self):
+        return self.content
+
+    def edit_line(self, line_number, new_text):
+        if 0 <= line_number <= len(self.content):
+            self.content[line_number] = new_text
+
+    def delete_line(self, line_number):
+        if 0 <= line_number <= len(self.content):
+            self.content.pop(line_number)
+
+class folder:
+    def __init__(self, name, parent):
+        self.name = name
+        self.files = {}
+        self.insideFolders = {}
+        self.parent = parent
+
+    def make_path(self):
+        if self.parent == None:
+            return "/"
+        else:
+            return self.parent.make_path().rstrip("/") + "/" + self.name
+
+class fileSystemManagement:
+    def __init__(self):
+        self.root = folder("//", None)
+        self.present = self.root
+
+    def ls(self):
+        print("Folders", list(self.present.insideFolders.keys()))
+        print("Files", list(self.present.files.keys()))
+
+    def mkdir(self, name):
+        if name in self.present.insideFolders:
+            print("Folder exists")
+        else:
+            self.present.insideFolders[name] = folder(name, self.present)
+
+    def touch(self, name):
+        if name.endswith(".txt"):
+            if name in self.present.files:
+                print("File exists")
+            else:
+                self.present.files[name] = file(name)
+        else:
+            print("Not .txt file")
+
+    def cd(self, name):
+        if name == "..":
+            if self.present.parent:
+                self.present = self.present.parent
+        elif name in self.present.insideFolders:
+            self.present = self.present.insideFolders[name]
+        else:
+            print("Folder not found")
+
+    def cat(self, name):
+        file = self.present.files.get(name)
+        if file:
+            for line in file.read():
+                print(line)
+        else:
+            print("File not found")
+
+    def nwfiletxt(self, name, line):
+        if name in self.present.files:
+            self.present.files[name].write(line)
+        else:
+            print("File not found")
+
+    def appendtxt(self, name, line):
+        if name in self.present.files:
+            self.present.files[name].append(line)
+        else:
+            print("File not found")
+
+    def editLine(self, name, line_number, text):
+        file = self.present.files.get(name)
+        if file:
+            file.edit_line(line_number, text)
+        else:
+            print("File not found")
+
+    def deline(self, name, line_number):
+        file = self.present.files.get(name)
+        if file:
+            file.delete_line(line_number - 1)
+            print(f"Line {line_number} deleted from {name}")
+        else:
+            print("File not found")
+
+    def rm(self, name):
+        if name in self.present.files:
+            self.present.files.pop(name)
+            print(f"File {name} removed")
+        elif name in self.present.insideFolders:
+            self.present.insideFolders.pop(name)
+            print(f"Folder {name} removed")
+        else:
+            print("Folder/File not found")
+
+    def copy_folder(self, folder1):
+        new_folder = folder(folder1.name)
+        for i, j in folder1.files.items():
+            new_folder.files[i] = file(j.name, list(j.content))
+        for i, j in folder1.insideFolders.items():
+            copy_insideFolder = self.copy_folder(j)
+            copy_insideFolder.parent = new_folder
+            new_folder.insideFolders[i] = copy_insideFolder
+        return new_folder
+
+
+    def mv(self, source_path, destination_path):
+        destination = self.present.insideFolders.get(destination_path)
+        if not destination:
+            print("Destination folder not found")
+            return
+
+        if source_path in self.present.files:
+            file = self.present.files.pop(source_path)
+            destination.files[source_path] = file
+            print(f"File {source_path} moved to {destination_path}")
+
+    def cp(self, source_path, destination_path):
+        destination = self.present.insideFolders.get(destination_path)
+        if not destination:
+            print("Destination folder not found")
+            return
+
+        if source_path not in self.present.files:
+            defult = self.present.files[source_path]
+            copy = file(defult.name, list(defult.content))
+            destination.files[copy.name] = copy
+            print(f"{source_path} file copied to {destination_path}")
+
+        elif source_path in self.present.insideFolders:
+            defult = self.present.insideFolders[source_path]
+            copy = self.copy_folder(defult)
+            destination.insideFolders[copy.name] = copy
+            copy.parent = destination
+            print(f"{source_path} file copied to {destination_path}")
+
+        else:
+            print("source not found")
+
+    def rename(self, last_name, new_name):
+        if last_name in self.present.files:
+            file = self.present.files.pop[last_name]
+            file.name = new_name
+            self.present.file[new_name] = file
+            print(f"file renamed from {last_name} to {new_name}")
+
+        elif last_name in self.present.files:
+            folder = self.present.insideFolders.pop[last_name]
+            folder.name = new_name
+            self.present.insideFolders[new_name] = folder
+            print(f"folder renamed from {last_name} to {new_name}")
+
+        else:
+            print(f"file/folder not found")
+
+
+f = fileSystemManagement()
+
+while True:
+    path = f.present.make_path()
+    request = input(f"{path}/$ ")
+
+    if request == "exit":
+        break
+
+    part = request.split()
+    if len(part) == 0:
+        continue
+
+    elif request.startswith("mkdir "):
+        if len(part) == 2:
+            name = part[1]
+            f.mkdir(name)
+
+    elif request == "ls":
+        f.ls()
+
+    elif request.startswith("cd "):
+        if len(part) == 2:
+            name = part[1]
+            f.cd(name)
+
+    elif request.startswith("touch "):
+        if len(part) == 2:
+            name = part[1]
+            f.touch(name)
+            print(f"File '{name}' created in the current directory.")
+
+    elif request.startswith("cat "):
+        if len(part) == 2:
+            name = part[1]
+            f.cat(name)
+
+    elif request.startswith("nwfiletxt "):
+        _, name = request.split()
+        print("enter the lines (/end/ means done)")
+        lines = []
+        while True:
+            line = input()
+            if line == "/end/":
+                break
+            lines.append(line)
+        text_full = "\n".join(lines)
+        f.nwfiletxt(name, text_full)
+
+    elif request.startswith("appendtxt "):
+        if len(part) == 2:
+            name = part[1]
+            if name in f.present.files:
+                print("enter the lines (/end/ means done)")
+                lines = []
+                while True:
+                    line = input()
+                    if line == "/end/":
+                        break
+                    lines.append(line)
+                for l in lines:
+                    f.appendtxt(name, l)
+            else:
+                print("file was not found")
+
+    elif request == "mv":
+        if len(part) == 2:
+            a = part[1].split()
+            if len(a) == 2:
+                s = a[0]
+                d = a[1]
+                f.mv(s, d)
+
+    elif request == "cp":
+        if len(part) == 2:
+            a = part[1].split()
+            if len(a) == 2:
+                s = a[0]
+                d = a[1]
+                f.cp(s, d)
+
+    elif request == "rename":
+        if len(part) == 2:
+            a = part[1].split()
+            if len(a) == 2:
+                old_name = a[0]
+                new_name = a[1]
+                f.rename(old_name, new_name)
